@@ -2,6 +2,10 @@ name: ci
 
 on: [push,pull_request]
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -42,9 +46,28 @@ jobs:
     steps:
       - name: checkout code
         uses: actions/checkout@v7
+
+      - name: log into AWS
+        uses: aws-actions/configure-aws-credentials@v6
+        with: 
+          role-to-assume: arn:aws:iam::647932856976:role/GithubActionsCICD
+          aws-region: eu-west-2
       
+      - name: log into Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
       - name: build the image
         run: docker build -t github-actions-ci .
+      
+      - name: tag the image
+        run: docker tag github-actions-ci 647932856976.dkr.ecr.eu-west-2.amazonaws.com/cicd-p1:latest
+        
+      - name: push the image to ecr
+        if: github.event_name == 'push'
+        run: docker push 647932856976.dkr.ecr.eu-west-2.amazonaws.com/cicd-p1:latest
+
+      
+
       
 
       
