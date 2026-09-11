@@ -1,4 +1,4 @@
-name: cd-test
+name: cd
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 jobs:
-  test-ssm:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -18,14 +18,19 @@ jobs:
           role-to-assume: arn:aws:iam::647932856976:role/GithubActionsCICD
           aws-region: eu-west-2
 
-
-      - name: send test command
+      - name: deploy application
         id: ssm
         run: |
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids "i-0b9792b5c4e0ade4f" \
             --document-name "AWS-RunShellScript" \
-            --parameters 'commands=["echo Hello from GitHub Actions"]' \
+            --parameters 'commands=[
+              "aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin 647932856976.dkr.ecr.eu-west-2.amazonaws.com",
+              "docker pull 647932856976.dkr.ecr.eu-west-2.amazonaws.com/cicd-p1:latest",
+              "docker stop cicd-p1 || true",
+              "docker rm cicd-p1 || true",
+              "docker run -d --name cicd-p1 -p 80:3000 647932856976.dkr.ecr.eu-west-2.amazonaws.com/cicd-p1:latest"
+            ]' \
             --query "Command.CommandId" \
             --output text)
 
